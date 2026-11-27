@@ -26,6 +26,11 @@ type DocumentMessage = {
   isError: boolean
 }
 
+type ChatMessage = {
+  role: 'user' | 'assistant'
+  text: string
+}
+
 const TOKEN_KEY = 'paperbase_token'
 const MAX_FILE_SIZE = 20 * 1024 * 1024
 
@@ -63,6 +68,10 @@ export default function DocumentLibrary() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [documentsHasMore, setDocumentsHasMore] = useState(false)
   const [loadingMoreDocuments, setLoadingMoreDocuments] = useState(false)
+  const [openChatId, setOpenChatId] = useState<string | null>(null)
+  const [chatDraft, setChatDraft] = useState('')
+  const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>({})
+  const [askingDocumentId, setAskingDocumentId] = useState<string | null>(null)
   const documentsLoading = Boolean(
     localStorage.getItem(TOKEN_KEY) && (!documentsLoaded || documentsRefreshing),
   )
@@ -217,6 +226,53 @@ export default function DocumentLibrary() {
     }
   }
 
+  function toggleChat(documentId: string) {
+    setOpenChatId((currentId) => currentId === documentId ? null : documentId)
+    setChatDraft('')
+  }
+
+  async function handleAsk(document: DocumentRecord, event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    const question = chatDraft.trim()
+    const token = localStorage.getItem(TOKEN_KEY)
+    if (!token || !question) return
+
+    setAskingDocumentId(document.id)
+    setChatMessages((current) => ({
+      ...current,
+      [document.id]: [...(current[document.id] ?? []), { role: 'user', text: question }],
+    }))
+    setChatDraft('')
+
+    try {
+      const { answer } = await apiRequest<{ answer: string }>(
+        '/api/documents/ask',
+        {
+          method: 'POST',
+          body: JSON.stringify({ question, documentId: document.id }),
+        },
+        token,
+      )
+      setChatMessages((current) => ({
+        ...current,
+        [document.id]: [...(current[document.id] ?? []), { role: 'assistant', text: answer }],
+      }))
+    } catch (cause) {
+      setChatMessages((current) => ({
+        ...current,
+        [document.id]: [
+          ...(current[document.id] ?? []),
+          {
+            role: 'assistant',
+            text: cause instanceof Error ? cause.message : 'Unable to answer that question.',
+          },
+        ],
+      }))
+    } finally {
+      setAskingDocumentId(null)
+    }
+  }
+
   async function loadMoreDocuments() {
     const token = localStorage.getItem(TOKEN_KEY)
     if (!token) return
@@ -351,7 +407,74 @@ export default function DocumentLibrary() {
                   >
                     {deletingId === document.id ? 'Deleting…' : 'Delete'}
                   </button>
+                  <button
+                    className="document-chat-button"
+                    type="button"
+                    aria-label={`Chat with ${document.name}`}
+                    aria-expanded={openChatId === document.id}
+                    title={`Chat with ${document.name}`}
+                    onClick={() => toggleChat(document.id)}
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M20 11.5a7.5 7.5 0 0 1-7.8 7.5H12l-4.2 2v-3.7A7.5 7.5 0 1 1 20 11.5Z" />
+                      <circle cx="9" cy="11.5" r=".7" fill="currentColor" stroke="none" />
+                      <circle cx="12" cy="11.5" r=".7" fill="currentColor" stroke="none" />
+                      <circle cx="15" cy="11.5" r=".7" fill="currentColor" stroke="none" />
+                    </svg>
+                  </button>
                 </div>
+                {openChatId === document.id && (
+                  <div className="document-chat">
+                    <div className="document-chat__heading">
+                      <div>
+                        <span className="card-kicker">Document chat</span>
+                        <strong>{document.name}</strong>
+                      </div>
+                      <button
+                        className="document-chat__close"
+                        type="button"
+                        aria-label="Close document chat"
+                        onClick={() => toggleChat(document.id)}
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="document-chat__messages" aria-live="polite">
+                      {(chatMessages[document.id]?.length ?? 0) === 0 ? (
+                        <p>Ask a question about this document.</p>
+                      ) : (
+                        chatMessages[document.id].map((message, index) => (
+                          <div
+                            className={`document-chat__message document-chat__message--${message.role}`}
+                            key={`${message.role}-${index}`}
+                          >
+                            {message.text}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <form
+                      className="document-chat__form"
+                      onSubmit={(event) => void handleAsk(document, event)}
+                    >
+                      <input
+                        value={chatDraft}
+                        onChange={(event) => setChatDraft(event.target.value)}
+                        placeholder="Ask a question..."
+                        aria-label={`Question about ${document.name}`}
+                        maxLength={2000}
+                        disabled={askingDocumentId === document.id}
+                        required
+                      />
+                      <button
+                        type="submit"
+                        disabled={askingDocumentId === document.id || !chatDraft.trim()}
+                      >
+                        {askingDocumentId === document.id ? 'Thinking…' : 'Ask'}
+                      </button>
+                    </form>
+                  </div>
+                )}
               </li>
             )
           })}

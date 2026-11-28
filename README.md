@@ -1,6 +1,13 @@
 # Paper Base - AI knowledge base which you can talk to
 Welcome Dashboard
+Create account, upload a file, Talk to it
 <img width="944" height="434" alt="Screenshot 2026-11-28 163559" src="https://github.com/user-attachments/assets/cf327f29-95f5-4273-9cd7-cd1be8404680" />
+
+Technologies Used: 
+Frontend: ReactJS, Typescript
+Backend: NodeJs, Typescript, Express
+Databases: Postgres, Supabase (for embeddings)
+Concepts Used: LLMS and RAGs
 
 
 # React + TypeScript + Vite

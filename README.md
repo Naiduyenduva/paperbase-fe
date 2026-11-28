@@ -1,3 +1,8 @@
+# Paper Base - AI knowledge base which you can talk to
+Welcome Dashboard
+<img width="944" height="434" alt="Screenshot 2026-11-28 163559" src="https://github.com/user-attachments/assets/cf327f29-95f5-4273-9cd7-cd1be8404680" />
+
+
 # React + TypeScript + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.

@@ -72,6 +72,7 @@ export default function DocumentLibrary() {
   const [chatDraft, setChatDraft] = useState('')
   const [chatMessages, setChatMessages] = useState<Record<string, ChatMessage[]>>({})
   const [askingDocumentId, setAskingDocumentId] = useState<string | null>(null)
+  const activeChatDocument = documents.find((document) => document.id === openChatId)
   const documentsLoading = Boolean(
     localStorage.getItem(TOKEN_KEY) && (!documentsLoaded || documentsRefreshing),
   )
@@ -215,6 +216,7 @@ export default function DocumentLibrary() {
       setDocuments((currentDocuments) =>
         currentDocuments.filter((item) => item.id !== document.id),
       )
+      if (openChatId === document.id) setOpenChatId(null)
       setDocumentMessage({ text: 'Document deleted.', isError: false })
     } catch (cause) {
       setDocumentMessage({
@@ -297,206 +299,211 @@ export default function DocumentLibrary() {
   }
 
   return (
-    <section className="documents-panel" aria-labelledby="documents-title">
-      <div className="documents-panel__heading">
-        <div>
-          <span className="card-kicker">Your library</span>
-          <h2 id="documents-title">Documents</h2>
-          <p>Keep your important files together in one quiet place.</p>
-        </div>
-        <span className="documents-count">
-          {documents.length}{documentsHasMore ? '+' : ''}{' '}
-          {documents.length === 1 && !documentsHasMore ? 'document' : 'documents'}
-        </span>
-      </div>
-
-      <form className="document-upload" onSubmit={handleUpload}>
-        <label className="document-file-picker">
-          <span className="document-file-picker__icon" aria-hidden="true">＋</span>
-          <span className="document-file-picker__copy">
-            <strong>{selectedFile ? selectedFile.name : 'Choose a document to upload'}</strong>
-            <small>PDF, TXT, or DOCX · up to 20 MB</small>
+    <section
+      className={`documents-panel${activeChatDocument ? ' documents-panel--chat-open' : ''}`}
+      aria-labelledby="documents-title"
+    >
+      <div className="documents-library">
+        <div className="documents-panel__heading">
+          <div>
+            <span className="card-kicker">Your library</span>
+            <h2 id="documents-title">Documents</h2>
+            <p>Keep your important files together in one quiet place.</p>
+          </div>
+          <span className="documents-count">
+            {documents.length}{documentsHasMore ? '+' : ''}{' '}
+            {documents.length === 1 && !documentsHasMore ? 'document' : 'documents'}
           </span>
-          <input
-            accept=".pdf,.txt,.docx,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-            aria-label="Choose a PDF, TXT, or DOCX document"
-            name="file"
-            onChange={(event) => {
-              const file = event.target.files?.[0] ?? null
-              setSelectedFile(file)
-              setDocumentMessage(null)
-              if (file && file.size > MAX_FILE_SIZE) {
-                setDocumentMessage({
-                  text: 'Choose a file smaller than 20 MB.',
-                  isError: true,
-                })
-              }
-            }}
-            required
-            type="file"
-          />
-        </label>
-        <button
-          className="document-upload__button"
-          type="submit"
-          disabled={uploading || !selectedFile || selectedFile.size > MAX_FILE_SIZE}
-        >
-          {uploading ? (
-            <>
-              <span className="button-loader" />
-              Uploading…
-            </>
-          ) : (
-            'Upload document'
-          )}
-        </button>
-      </form>
+        </div>
 
-      {documentsError && (
-        <div className="document-message document-message--error" role="alert">
-          {documentsError}
+        <form className="document-upload" onSubmit={handleUpload}>
+          <label className="document-file-picker">
+            <span className="document-file-picker__icon" aria-hidden="true">＋</span>
+            <span className="document-file-picker__copy">
+              <strong>{selectedFile ? selectedFile.name : 'Choose a document to upload'}</strong>
+              <small>PDF, TXT, or DOCX · up to 20 MB</small>
+            </span>
+            <input
+              accept=".pdf,.txt,.docx,application/pdf,text/plain,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              aria-label="Choose a PDF, TXT, or DOCX document"
+              name="file"
+              onChange={(event) => {
+                const file = event.target.files?.[0] ?? null
+                setSelectedFile(file)
+                setDocumentMessage(null)
+                if (file && file.size > MAX_FILE_SIZE) {
+                  setDocumentMessage({
+                    text: 'Choose a file smaller than 20 MB.',
+                    isError: true,
+                  })
+                }
+              }}
+              required
+              type="file"
+            />
+          </label>
           <button
-            className="document-action"
-            type="button"
-            onClick={() => void reloadDocuments()}
+            className="document-upload__button"
+            type="submit"
+            disabled={uploading || !selectedFile || selectedFile.size > MAX_FILE_SIZE}
           >
-            Try again
+            {uploading ? (
+              <>
+                <span className="button-loader" />
+                Uploading…
+              </>
+            ) : (
+              'Upload document'
+            )}
           </button>
-        </div>
-      )}
-      {documentMessage && (
-        <div
-          className={`document-message${documentMessage.isError ? ' document-message--error' : ''}`}
-          role={documentMessage.isError ? 'alert' : 'status'}
-        >
-          {documentMessage.text}
-        </div>
-      )}
+        </form>
 
-      {documentsLoading ? (
-        <div className="documents-empty" aria-live="polite">
-          <span className="loader" />
-          <p>Gathering your documents…</p>
-        </div>
-      ) : documents.length > 0 ? (
-        <ul className="document-list" aria-label="Your uploaded documents">
-          {documents.map((document) => {
-            const extension = document.name.split('.').pop()?.toUpperCase() ?? 'FILE'
-            return (
-              <li className="document-row" key={document.id}>
-                <span className="document-row__type" aria-hidden="true">{extension}</span>
-                <div className="document-row__details">
-                  <strong title={document.name}>{document.name}</strong>
-                  <span>
-                    {formatFileSize(document.metadata?.size)} · {formatDocumentDate(document.createdAt)}
-                  </span>
-                </div>
-                <div className="document-row__actions">
-                  <button
-                    className="document-action"
-                    type="button"
-                    onClick={() => void handleDownload(document)}
-                  >
-                    Download
-                  </button>
-                  <button
-                    className="document-action document-action--delete"
-                    type="button"
-                    disabled={deletingId === document.id}
-                    onClick={() => void handleDelete(document)}
-                  >
-                    {deletingId === document.id ? 'Deleting…' : 'Delete'}
-                  </button>
-                  <button
-                    className="document-chat-button"
-                    type="button"
-                    aria-label={`Chat with ${document.name}`}
-                    aria-expanded={openChatId === document.id}
-                    title={`Chat with ${document.name}`}
-                    onClick={() => toggleChat(document.id)}
-                  >
-                    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                      <path d="M20 11.5a7.5 7.5 0 0 1-7.8 7.5H12l-4.2 2v-3.7A7.5 7.5 0 1 1 20 11.5Z" />
-                      <circle cx="9" cy="11.5" r=".7" fill="currentColor" stroke="none" />
-                      <circle cx="12" cy="11.5" r=".7" fill="currentColor" stroke="none" />
-                      <circle cx="15" cy="11.5" r=".7" fill="currentColor" stroke="none" />
-                    </svg>
-                  </button>
-                </div>
-                {openChatId === document.id && (
-                  <div className="document-chat">
-                    <div className="document-chat__heading">
-                      <div>
-                        <span className="card-kicker">Document chat</span>
-                        <strong>{document.name}</strong>
-                      </div>
-                      <button
-                        className="document-chat__close"
-                        type="button"
-                        aria-label="Close document chat"
-                        onClick={() => toggleChat(document.id)}
-                      >
-                        ×
-                      </button>
-                    </div>
-                    <div className="document-chat__messages" aria-live="polite">
-                      {(chatMessages[document.id]?.length ?? 0) === 0 ? (
-                        <p>Ask a question about this document.</p>
-                      ) : (
-                        chatMessages[document.id].map((message, index) => (
-                          <div
-                            className={`document-chat__message document-chat__message--${message.role}`}
-                            key={`${message.role}-${index}`}
-                          >
-                            {message.text}
-                          </div>
-                        ))
-                      )}
-                    </div>
-                    <form
-                      className="document-chat__form"
-                      onSubmit={(event) => void handleAsk(document, event)}
-                    >
-                      <input
-                        value={chatDraft}
-                        onChange={(event) => setChatDraft(event.target.value)}
-                        placeholder="Ask a question..."
-                        aria-label={`Question about ${document.name}`}
-                        maxLength={2000}
-                        disabled={askingDocumentId === document.id}
-                        required
-                      />
-                      <button
-                        type="submit"
-                        disabled={askingDocumentId === document.id || !chatDraft.trim()}
-                      >
-                        {askingDocumentId === document.id ? 'Thinking…' : 'Ask'}
-                      </button>
-                    </form>
+        {documentsError && (
+          <div className="document-message document-message--error" role="alert">
+            {documentsError}
+            <button
+              className="document-action"
+              type="button"
+              onClick={() => void reloadDocuments()}
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        {documentMessage && (
+          <div
+            className={`document-message${documentMessage.isError ? ' document-message--error' : ''}`}
+            role={documentMessage.isError ? 'alert' : 'status'}
+          >
+            {documentMessage.text}
+          </div>
+        )}
+
+        {documentsLoading ? (
+          <div className="documents-empty" aria-live="polite">
+            <span className="loader" />
+            <p>Gathering your documents…</p>
+          </div>
+        ) : documents.length > 0 ? (
+          <ul className="document-list" aria-label="Your uploaded documents">
+            {documents.map((document) => {
+              const extension = document.name.split('.').pop()?.toUpperCase() ?? 'FILE'
+              return (
+                <li className="document-row" key={document.id}>
+                  <span className="document-row__type" aria-hidden="true">{extension}</span>
+                  <div className="document-row__details">
+                    <strong title={document.name}>{document.name}</strong>
+                    <span>
+                      {formatFileSize(document.metadata?.size)} · {formatDocumentDate(document.createdAt)}
+                    </span>
                   </div>
-                )}
+                  <div className="document-row__actions">
+                    <button
+                      className="document-action"
+                      type="button"
+                      onClick={() => void handleDownload(document)}
+                    >
+                      Download
+                    </button>
+                    <button
+                      className="document-action document-action--delete"
+                      type="button"
+                      disabled={deletingId === document.id}
+                      onClick={() => void handleDelete(document)}
+                    >
+                      {deletingId === document.id ? 'Deleting…' : 'Delete'}
+                    </button>
+                    <button
+                      className="document-chat-button"
+                      type="button"
+                      aria-label={`Chat with ${document.name}`}
+                      aria-expanded={openChatId === document.id}
+                      title={`Chat with ${document.name}`}
+                      onClick={() => toggleChat(document.id)}
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                        <path d="M20 11.5a7.5 7.5 0 0 1-7.8 7.5H12l-4.2 2v-3.7A7.5 7.5 0 1 1 20 11.5Z" />
+                        <circle cx="9" cy="11.5" r=".7" fill="currentColor" stroke="none" />
+                        <circle cx="12" cy="11.5" r=".7" fill="currentColor" stroke="none" />
+                        <circle cx="15" cy="11.5" r=".7" fill="currentColor" stroke="none" />
+                      </svg>
+                    </button>
+                  </div>
+                </li>
+              )
+            })}
+            {documentsHasMore && (
+              <li className="document-list__more">
+                <button
+                  className="document-action"
+                  type="button"
+                  disabled={loadingMoreDocuments}
+                  onClick={() => void loadMoreDocuments()}
+                >
+                  {loadingMoreDocuments ? 'Loading…' : 'Load more documents'}
+                </button>
               </li>
-            )
-          })}
-          {documentsHasMore && (
-            <li className="document-list__more">
-              <button
-                className="document-action"
-                type="button"
-                disabled={loadingMoreDocuments}
-                onClick={() => void loadMoreDocuments()}
-              >
-                {loadingMoreDocuments ? 'Loading…' : 'Load more documents'}
-              </button>
-            </li>
-          )}
-        </ul>
-      ) : documentsError ? null : (
-        <div className="documents-empty">
-          <span className="documents-empty__icon" aria-hidden="true">↗</span>
-          <strong>Your library is ready</strong>
-          <p>Upload a PDF, TXT, or DOCX file to see it here.</p>
-        </div>
+            )}
+          </ul>
+        ) : documentsError ? null : (
+          <div className="documents-empty">
+            <span className="documents-empty__icon" aria-hidden="true">↗</span>
+            <strong>Your library is ready</strong>
+            <p>Upload a PDF, TXT, or DOCX file to see it here.</p>
+          </div>
+        )}
+      </div>
+      {activeChatDocument && (
+        <aside className="document-chat" aria-label={`Chat with ${activeChatDocument.name}`}>
+          <div className="document-chat__heading">
+            <div>
+              <span className="card-kicker">Document chat</span>
+              <strong>{activeChatDocument.name}</strong>
+            </div>
+            <button
+              className="document-chat__close"
+              type="button"
+              aria-label="Close document chat"
+              onClick={() => toggleChat(activeChatDocument.id)}
+            >
+              ×
+            </button>
+          </div>
+          <div className="document-chat__messages" aria-live="polite">
+            {(chatMessages[activeChatDocument.id]?.length ?? 0) === 0 ? (
+              <p>Ask a question about this document.</p>
+            ) : (
+              chatMessages[activeChatDocument.id].map((message, index) => (
+                <div
+                  className={`document-chat__message document-chat__message--${message.role}`}
+                  key={`${message.role}-${index}`}
+                >
+                  {message.text}
+                </div>
+              ))
+            )}
+          </div>
+          <form
+            className="document-chat__form"
+            onSubmit={(event) => void handleAsk(activeChatDocument, event)}
+          >
+            <input
+              value={chatDraft}
+              onChange={(event) => setChatDraft(event.target.value)}
+              placeholder="Ask a question..."
+              aria-label={`Question about ${activeChatDocument.name}`}
+              maxLength={2000}
+              disabled={askingDocumentId === activeChatDocument.id}
+              required
+            />
+            <button
+              type="submit"
+              disabled={askingDocumentId === activeChatDocument.id || !chatDraft.trim()}
+            >
+              {askingDocumentId === activeChatDocument.id ? 'Thinking…' : 'Ask'}
+            </button>
+          </form>
+        </aside>
       )}
     </section>
   )

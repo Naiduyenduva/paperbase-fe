@@ -509,7 +509,7 @@
 }
 
 .welcome {
-  padding: 66px 0 36px;
+  padding: 66px 0 0px;
 }
 
 .welcome .eyebrow {
@@ -545,6 +545,17 @@
   border: 1px solid #e8ece6;
   border-radius: 14px;
   background: #fff;
+}
+
+.documents-panel--chat-open {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(300px, 0.95fr);
+  align-items: stretch;
+  gap: 24px;
+}
+
+.documents-library {
+  min-width: 0;
 }
 
 .documents-panel__heading {
@@ -806,8 +817,10 @@
 }
 
 .document-chat {
-  width: 100%;
-  margin: 4px 0 2px 55px;
+  display: flex;
+  min-width: 0;
+  min-height: 420px;
+  flex-direction: column;
   overflow: hidden;
   border: 1px solid #dde7dc;
   border-radius: 10px;
@@ -854,7 +867,9 @@
 
 .document-chat__messages {
   display: grid;
-  max-height: 260px;
+  min-height: 0;
+  flex: 1;
+  align-content: start;
   gap: 8px;
   padding: 12px 14px;
   overflow-y: auto;
@@ -1083,7 +1098,11 @@
   }
 
   .document-chat {
-    margin-left: 0;
+    min-height: 360px;
+  }
+
+  .documents-panel--chat-open {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .dashboard-footer {

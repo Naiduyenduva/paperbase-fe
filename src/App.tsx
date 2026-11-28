@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AuthPage, { type AuthMode } from "./components/AuthPage";
 import Dashboard from "./components/Dashboard";
+import type { Theme } from "./components/ThemeToggle";
 import { ApiError, apiRequest } from "./lib/api";
 import type { AuthResponse, User } from "./types";
 import "./App.css";
@@ -14,6 +15,18 @@ function App() {
   );
   const [mode, setMode] = useState<AuthMode>("signup");
   const [error, setError] = useState("");
+  const [theme, setTheme] = useState<Theme>(() =>
+    localStorage.getItem("paperbase_theme") === "dark" ? "dark" : "light",
+  );
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("paperbase_theme", theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((currentTheme) => currentTheme === "light" ? "dark" : "light");
+  }
 
   useEffect(() => {
     let active = true;
@@ -68,13 +81,22 @@ function App() {
   }
 
   if (user) {
-    return <Dashboard user={user} onSignOut={signOut} />;
+    return (
+      <Dashboard
+        user={user}
+        theme={theme}
+        onThemeToggle={toggleTheme}
+        onSignOut={signOut}
+      />
+    );
   }
 
   return (
     <AuthPage
       mode={mode}
+      theme={theme}
       error={error}
+      onThemeToggle={toggleTheme}
       onModeChange={setMode}
       onErrorChange={setError}
       onAuthenticated={handleAuthenticated}

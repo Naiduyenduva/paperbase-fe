@@ -2,12 +2,15 @@ import { useState, type FormEvent } from 'react'
 import { apiRequest } from '../lib/api'
 import type { AuthResponse } from '../types'
 import BrandMark from './BrandMark'
+import ThemeToggle, { type Theme } from './ThemeToggle'
 
 export type AuthMode = 'signup' | 'signin'
 
 type AuthPageProps = {
   mode: AuthMode
+  theme: Theme
   error: string
+  onThemeToggle: () => void
   onModeChange: (mode: AuthMode) => void
   onErrorChange: (error: string) => void
   onAuthenticated: (result: AuthResponse) => void
@@ -15,7 +18,9 @@ type AuthPageProps = {
 
 export default function AuthPage({
   mode,
+  theme,
   error,
+  onThemeToggle,
   onModeChange,
   onErrorChange,
   onAuthenticated,
@@ -60,6 +65,11 @@ export default function AuthPage({
 
   return (
     <main className="auth-page">
+      <ThemeToggle
+        className="theme-toggle--auth"
+        theme={theme}
+        onToggle={onThemeToggle}
+      />
       <section className="auth-story" aria-label="About Paperbase">
         <BrandMark />
         <div className="story-content">

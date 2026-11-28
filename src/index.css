@@ -8,8 +8,15 @@
   font-weight: 400;
   color: #435248;
   background: #f5f7f3;
+  color-scheme: light;
 
   --serif: Georgia, 'Times New Roman', serif;
+}
+
+:root[data-theme='dark'] {
+  color: #e2eae3;
+  background: #121914;
+  color-scheme: dark;
 }
 
 * {
@@ -20,6 +27,11 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
+  background: #f5f7f3;
+}
+
+:root[data-theme='dark'] body {
+  background: #121914;
 }
 
 button,
